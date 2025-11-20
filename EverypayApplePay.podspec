@@ -31,12 +31,12 @@ Apple Pay wrapper for Everypay users.
   s.ios.deployment_target = '12.4'
 
   s.source_files = 'EverypayApplePay/Classes/**/*'
-  
+  s.public_header_files = 'EverypayApplePay/Classes/**/*.h'
+  s.frameworks = 'UIKit', 'PassKit'
+
   # s.resource_bundles = {
   #   'EverypayApplePay' => ['EverypayApplePay/Assets/*.png']
   # }
 
-  # s.public_header_files = 'Pod/Classes/**/*.h'
-  # s.frameworks = 'UIKit', 'MapKit'
   # s.dependency 'AFNetworking', '~> 2.3'
 end
