@@ -1,0 +1,13 @@
+use_frameworks!
+
+platform :ios, '10.0'
+
+target 'EverypayApplePay_Example' do
+  pod 'EverypayApplePay', :path => '../'
+
+  target 'EverypayApplePay_Tests' do
+    inherit! :search_paths
+
+    pod 'Kiwi'
+  end
+end
