@@ -1,0 +1,6 @@
+framework module EverypayApplePay {
+  umbrella header "EverypayApplePay-umbrella.h"
+
+  export *
+  module * { export * }
+}
