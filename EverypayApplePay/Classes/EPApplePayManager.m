@@ -10,8 +10,18 @@
 
 @interface EPApplePayManager ()
 
-@property (nonatomic, strong, readwrite) PKPaymentButton *paymentButton;
+// Configuration properties
+@property (nonatomic, strong) NSDecimalNumber *amount;
+@property (nonatomic, copy) NSString *merchantIdentifier;
+@property (nonatomic, copy) NSString *merchantName;
+@property (nonatomic, copy) NSString *currencyCode;
+@property (nonatomic, copy) NSString *countryCode;
+@property (nonatomic, assign) PKPaymentButtonType buttonType;
+@property (nonatomic, assign) PKPaymentButtonStyle buttonStyle;
+
+// Payment flow properties
 @property (nonatomic, strong) PKPaymentRequest *currentPaymentRequest;
+@property (nonatomic, copy) EPApplePayCompletionHandler completionHandler;
 
 @end
 
@@ -48,58 +58,84 @@
                                                                  capabilities:capabilities];
 }
 
-#pragma mark - Button Creation
+#pragma mark - Configuration
 
-- (PKPaymentButton *)createPaymentButtonWithType:(PKPaymentButtonType)type
-                                           style:(PKPaymentButtonStyle)style {
-    return [self createPaymentButtonWithType:type style:style corner:4.0];
+- (void)configureWithAmount:(NSDecimalNumber *)amount
+           merchantIdentifier:(NSString *)merchantId
+                 merchantName:(NSString *)merchantName
+                 currencyCode:(NSString *)currencyCode
+                  countryCode:(NSString *)countryCode
+                   buttonType:(PKPaymentButtonType)buttonType
+                  buttonStyle:(PKPaymentButtonStyle)buttonStyle {
+
+    self.amount = amount;
+    self.merchantIdentifier = merchantId;
+    self.merchantName = merchantName;
+    self.currencyCode = currencyCode;
+    self.countryCode = countryCode;
+    self.buttonType = buttonType;
+    self.buttonStyle = buttonStyle;
 }
 
-- (PKPaymentButton *)createPaymentButtonWithType:(PKPaymentButtonType)type
-                                           style:(PKPaymentButtonStyle)style
-                                          corner:(CGFloat)cornerRadius {
-    PKPaymentButton *button = [PKPaymentButton buttonWithType:type style:style];
-    button.cornerRadius = cornerRadius;
+#pragma mark - Button Creation
+
+- (PKPaymentButton *)createPaymentButton {
+    PKPaymentButton *button = [PKPaymentButton buttonWithType:self.buttonType
+                                                        style:self.buttonStyle];
+    button.cornerRadius = 4.0;
 
     // Add target for button tap
     [button addTarget:self
                action:@selector(paymentButtonTapped:)
      forControlEvents:UIControlEventTouchUpInside];
 
-    self.paymentButton = button;
     return button;
 }
 
 #pragma mark - Button Action
 
 - (void)paymentButtonTapped:(PKPaymentButton *)sender {
-    if ([self.delegate respondsToSelector:@selector(applePayButtonTapped)]) {
-        [self.delegate applePayButtonTapped];
-    }
+    // Button tap is handled internally - no delegate callback needed
+    // The merchant should call presentPaymentFromViewController:completionHandler:
+    // This method is kept for potential future use or can be removed if not needed
 }
 
 #pragma mark - Payment Presentation
 
-- (void)presentApplePayWithMerchantIdentifier:(NSString *)merchantId
-                                  currencyCode:(NSString *)currencyCode
-                                   countryCode:(NSString *)countryCode
-                                  paymentItems:(NSArray<PKPaymentSummaryItem *> *)items
-                            fromViewController:(UIViewController *)viewController {
+- (void)presentPaymentFromViewController:(UIViewController *)viewController
+                       completionHandler:(EPApplePayCompletionHandler)completion {
+
+    // Store completion handler
+    self.completionHandler = completion;
+
+    // Validate configuration
+    if (!self.amount || !self.merchantIdentifier || !self.merchantName ||
+        !self.currencyCode || !self.countryCode) {
+        NSError *error = [NSError errorWithDomain:@"com.everypay.applepay"
+                                             code:1000
+                                         userInfo:@{NSLocalizedDescriptionKey: @"Apple Pay manager not configured. Call configureWithAmount:merchantIdentifier:... before presenting payment."}];
+        if (completion) {
+            completion(nil, error);
+        }
+        return;
+    }
 
     // Create payment request
     PKPaymentRequest *request = [[PKPaymentRequest alloc] init];
-    request.merchantIdentifier = merchantId;
-    request.countryCode = countryCode;
-    request.currencyCode = currencyCode;
+    request.merchantIdentifier = self.merchantIdentifier;
+    request.countryCode = self.countryCode;
+    request.currencyCode = self.currencyCode;
 
-    // Configure supported networks (Visa and Mastercard as specified)
+    // Configure supported networks (Visa and Mastercard)
     request.supportedNetworks = @[PKPaymentNetworkVisa, PKPaymentNetworkMasterCard];
 
     // Set merchant capabilities
     request.merchantCapabilities = PKMerchantCapability3DS;
 
-    // Set payment items
-    request.paymentSummaryItems = items;
+    // Create payment summary item
+    PKPaymentSummaryItem *totalItem = [PKPaymentSummaryItem summaryItemWithLabel:self.merchantName
+                                                                           amount:self.amount];
+    request.paymentSummaryItems = @[totalItem];
 
     // Store current request
     self.currentPaymentRequest = request;
@@ -117,8 +153,8 @@
                                              code:1001
                                          userInfo:@{NSLocalizedDescriptionKey: @"Unable to create payment authorization view controller. Please check your payment request configuration."}];
 
-        if ([self.delegate respondsToSelector:@selector(applePayPaymentFailed:)]) {
-            [self.delegate applePayPaymentFailed:error];
+        if (completion) {
+            completion(nil, error);
         }
     }
 }
@@ -129,30 +165,29 @@
                        didAuthorizePayment:(PKPayment *)payment
                                    handler:(void (^)(PKPaymentAuthorizationResult * _Nonnull))completion {
 
-    // Notify delegate about authorized payment
-    if ([self.delegate respondsToSelector:@selector(applePayPaymentAuthorized:)]) {
-        [self.delegate applePayPaymentAuthorized:payment];
-    }
-
-    // In a real implementation, you would:
-    // 1. Send the payment token to your backend server
-    // 2. Process the payment
-    // 3. Return success or failure based on the server response
-    //
-    // For now, we'll return success. The integrating app should handle
-    // the actual payment processing in the delegate method.
-
+    // Return success to Apple Pay - the merchant will handle the actual payment processing
+    // with their backend using the payment token
     PKPaymentAuthorizationResult *result = [[PKPaymentAuthorizationResult alloc]
                                            initWithStatus:PKPaymentAuthorizationStatusSuccess
                                            errors:nil];
     completion(result);
+
+    // Call merchant's completion handler with the payment token
+    if (self.completionHandler) {
+        self.completionHandler(payment, nil);
+        self.completionHandler = nil; // Clear after calling
+    }
 }
 
 - (void)paymentAuthorizationViewControllerDidFinish:(PKPaymentAuthorizationViewController *)controller {
     [controller dismissViewControllerAnimated:YES completion:^{
-        // Notify delegate that payment flow finished (either completed or cancelled)
-        if ([self.delegate respondsToSelector:@selector(applePayPaymentCancelled)]) {
-            [self.delegate applePayPaymentCancelled];
+        // If completion handler wasn't called yet, it means payment was cancelled
+        if (self.completionHandler) {
+            NSError *error = [NSError errorWithDomain:@"com.everypay.applepay"
+                                                 code:1002
+                                             userInfo:@{NSLocalizedDescriptionKey: @"Payment was cancelled by the user."}];
+            self.completionHandler(nil, error);
+            self.completionHandler = nil;
         }
     }];
 }

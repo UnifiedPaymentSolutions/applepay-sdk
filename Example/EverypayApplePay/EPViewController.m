@@ -9,7 +9,7 @@
 #import "EPViewController.h"
 #import <EverypayApplePay/EverypayApplePay.h>
 
-@interface EPViewController () <EPApplePayManagerDelegate>
+@interface EPViewController ()
 
 @property (nonatomic, strong) EPApplePayManager *applePayManager;
 
@@ -23,17 +23,23 @@
 
     // Initialize Apple Pay Manager
     self.applePayManager = [EPApplePayManager sharedManager];
-    self.applePayManager.delegate = self;
 
     // Set background color
     self.view.backgroundColor = [UIColor whiteColor];
 
     // Check if Apple Pay is available
     if ([self.applePayManager canMakePayments]) {
-        // Create Apple Pay button
-        PKPaymentButton *applePayButton = [self.applePayManager createPaymentButtonWithType:PKPaymentButtonTypeBuy
-                                                                                      style:PKPaymentButtonStyleBlack
-                                                                                     corner:8.0];
+        // Configure payment details (Step 1)
+        [self.applePayManager configureWithAmount:[NSDecimalNumber decimalNumberWithString:@"19.99"]
+                                merchantIdentifier:@"merchant.com.everypay.example"
+                                      merchantName:@"EveryPay Example Store"
+                                      currencyCode:@"USD"
+                                       countryCode:@"US"
+                                        buttonType:PKPaymentButtonTypeBuy
+                                       buttonStyle:PKPaymentButtonStyleBlack];
+
+        // Create Apple Pay button (Step 2)
+        PKPaymentButton *applePayButton = [self.applePayManager createPaymentButton];
 
         // Configure button frame
         CGFloat buttonWidth = 280;
@@ -46,6 +52,11 @@
                                            UIViewAutoresizingFlexibleBottomMargin |
                                            UIViewAutoresizingFlexibleLeftMargin |
                                            UIViewAutoresizingFlexibleRightMargin;
+
+        // Add tap handler
+        [applePayButton addTarget:self
+                           action:@selector(handleApplePayButtonTap)
+                 forControlEvents:UIControlEventTouchUpInside];
 
         // Add button to view
         [self.view addSubview:applePayButton];
@@ -60,6 +71,19 @@
                                   UIViewAutoresizingFlexibleBottomMargin |
                                   UIViewAutoresizingFlexibleWidth;
         [self.view addSubview:label];
+
+        // Add info label below button
+        UILabel *infoLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, buttonY + buttonHeight + 20,
+                                                                        self.view.bounds.size.width - 40, 60)];
+        infoLabel.text = @"Tap the button to see the Apple Pay sheet.\n\nAmount: $19.99";
+        infoLabel.numberOfLines = 0;
+        infoLabel.textAlignment = NSTextAlignmentCenter;
+        infoLabel.font = [UIFont systemFontOfSize:14];
+        infoLabel.textColor = [UIColor grayColor];
+        infoLabel.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
+                                      UIViewAutoresizingFlexibleBottomMargin |
+                                      UIViewAutoresizingFlexibleWidth;
+        [self.view addSubview:infoLabel];
     } else {
         // Apple Pay not available
         UILabel *errorLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 0, self.view.bounds.size.width - 40, 100)];
@@ -82,32 +106,57 @@
     // Dispose of any resources that can be recreated.
 }
 
-#pragma mark - EPApplePayManagerDelegate
+#pragma mark - Apple Pay Button Handler
 
-- (void)applePayButtonTapped {
-    NSLog(@"Apple Pay button tapped");
+- (void)handleApplePayButtonTap {
+    NSLog(@"Apple Pay button tapped - presenting payment sheet");
 
-    // This is where you would present the payment sheet
-    // For this basic example, we just log the tap
-    // In a real implementation, you would call presentApplePayWithMerchantIdentifier:
+    // Present payment and handle result (Step 3)
+    [self.applePayManager presentPaymentFromViewController:self
+                                         completionHandler:^(PKPayment *payment, NSError *error) {
+        if (payment) {
+            // Payment successful
+            NSLog(@"Payment authorized!");
+            NSLog(@"Transaction ID: %@", payment.token.transactionIdentifier);
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Apple Pay"
-                                                                   message:@"Button tapped! In a real app, this would present the payment sheet."
+            // In a real app, you would send payment.token to your backend
+            [self showSuccessAlert:payment];
+        } else if (error) {
+            // Payment failed or cancelled
+            NSLog(@"Payment error: %@", error.localizedDescription);
+            [self showErrorAlert:error];
+        }
+    }];
+}
+
+#pragma mark - Helper Methods
+
+- (void)showSuccessAlert:(PKPayment *)payment {
+    NSString *message = [NSString stringWithFormat:@"Payment token received!\n\nTransaction ID:\n%@\n\nIn a real app, you would send this token to your backend for processing.",
+                        payment.token.transactionIdentifier];
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Payment Successful"
+                                                                   message:message
                                                             preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)applePayPaymentAuthorized:(PKPayment *)payment {
-    NSLog(@"Payment authorized: %@", payment.token.transactionIdentifier);
-}
+- (void)showErrorAlert:(NSError *)error {
+    NSString *title = @"Payment Error";
+    NSString *message = error.localizedDescription;
 
-- (void)applePayPaymentFailed:(NSError *)error {
-    NSLog(@"Payment failed: %@", error.localizedDescription);
-}
+    // Check if it was a cancellation
+    if (error.code == 1002) {
+        title = @"Payment Cancelled";
+        message = @"You cancelled the payment.";
+    }
 
-- (void)applePayPaymentCancelled {
-    NSLog(@"Payment cancelled by user");
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 @end

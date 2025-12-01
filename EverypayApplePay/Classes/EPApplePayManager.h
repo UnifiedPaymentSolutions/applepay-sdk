@@ -12,20 +12,14 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@protocol EPApplePayManagerDelegate <NSObject>
-
-@optional
-- (void)applePayButtonTapped;
-- (void)applePayPaymentAuthorized:(PKPayment *)payment;
-- (void)applePayPaymentFailed:(NSError *)error;
-- (void)applePayPaymentCancelled;
-
-@end
+/**
+ Completion handler for Apple Pay payment flow
+ @param payment The payment object containing the payment token if successful
+ @param error Error object if payment failed or was cancelled
+ */
+typedef void (^EPApplePayCompletionHandler)(PKPayment * _Nullable payment, NSError * _Nullable error);
 
 @interface EPApplePayManager : NSObject <PKPaymentAuthorizationViewControllerDelegate>
-
-@property (nonatomic, weak, nullable) id<EPApplePayManagerDelegate> delegate;
-@property (nonatomic, strong, readonly) PKPaymentButton *paymentButton;
 
 /**
  Returns the shared instance of EPApplePayManager
@@ -48,38 +42,37 @@ NS_ASSUME_NONNULL_BEGIN
                        capabilities:(PKMerchantCapability)capabilities;
 
 /**
- Create an Apple Pay button with default corner radius
- @param type The button type (e.g., PKPaymentButtonTypeBuy, PKPaymentButtonTypeCheckout)
- @param style The button style (e.g., PKPaymentButtonStyleBlack, PKPaymentButtonStyleWhite)
- @return Configured PKPaymentButton instance
+ Configure the Apple Pay manager with merchant and payment information
+ @param amount Payment amount as NSDecimalNumber
+ @param merchantId Your Apple Pay merchant identifier
+ @param merchantName Merchant display name shown to the user
+ @param currencyCode Three-letter ISO 4217 currency code (e.g., "USD", "EUR")
+ @param countryCode Two-letter ISO 3166 country code (e.g., "US", "GB")
+ @param buttonType The button type (default: PKPaymentButtonTypeBuy)
+ @param buttonStyle The button style (default: PKPaymentButtonStyleBlack)
  */
-- (PKPaymentButton *)createPaymentButtonWithType:(PKPaymentButtonType)type
-                                           style:(PKPaymentButtonStyle)style;
+- (void)configureWithAmount:(NSDecimalNumber *)amount
+           merchantIdentifier:(NSString *)merchantId
+                 merchantName:(NSString *)merchantName
+                 currencyCode:(NSString *)currencyCode
+                  countryCode:(NSString *)countryCode
+                   buttonType:(PKPaymentButtonType)buttonType
+                  buttonStyle:(PKPaymentButtonStyle)buttonStyle;
 
 /**
- Create an Apple Pay button with custom corner radius
- @param type The button type (e.g., PKPaymentButtonTypeBuy, PKPaymentButtonTypeCheckout)
- @param style The button style (e.g., PKPaymentButtonStyleBlack, PKPaymentButtonStyleWhite)
- @param cornerRadius Corner radius for the button (recommended: 4.0-8.0)
- @return Configured PKPaymentButton instance
+ Create and return an Apple Pay button configured with the settings from configureWithAmount:...
+ The button automatically triggers the payment flow when tapped
+ @return Configured PKPaymentButton instance ready to be added to your view hierarchy
  */
-- (PKPaymentButton *)createPaymentButtonWithType:(PKPaymentButtonType)type
-                                           style:(PKPaymentButtonStyle)style
-                                          corner:(CGFloat)cornerRadius;
+- (PKPaymentButton *)createPaymentButton;
 
 /**
  Present the Apple Pay payment sheet
- @param merchantId Your Apple Pay merchant identifier
- @param currencyCode Three-letter ISO 4217 currency code (e.g., "USD", "EUR")
- @param countryCode Two-letter ISO 3166 country code (e.g., "US", "GB")
- @param items Array of PKPaymentSummaryItem objects representing the payment breakdown
  @param viewController The view controller to present the payment sheet from
+ @param completion Completion handler called with payment token on success, or error on failure/cancellation
  */
-- (void)presentApplePayWithMerchantIdentifier:(NSString *)merchantId
-                                  currencyCode:(NSString *)currencyCode
-                                   countryCode:(NSString *)countryCode
-                                  paymentItems:(NSArray<PKPaymentSummaryItem *> *)items
-                            fromViewController:(UIViewController *)viewController;
+- (void)presentPaymentFromViewController:(UIViewController *)viewController
+                       completionHandler:(EPApplePayCompletionHandler)completion;
 
 @end
 
