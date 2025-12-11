@@ -59,7 +59,10 @@ Before using this library, you need to configure Apple Pay in your project:
 4. Click **+ Capability** and add **Apple Pay**
 5. Select the Merchant ID you created
 
-### 3. Entitlements
+### 3. Everypay setup
+1. Upload the certificate ("Apple Pay Payment Processing") from step 1 to the Everypay Merchant portal under E-Shop Settings -> select shop -> Apple Pay (in apps) -> Upload Certificate
+
+### 4. Entitlements
 
 Xcode will automatically add the Apple Pay entitlement to your project. Verify that your entitlements file contains:
 
