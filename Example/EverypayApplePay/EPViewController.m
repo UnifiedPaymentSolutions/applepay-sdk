@@ -38,6 +38,14 @@
                                         buttonType:PKPaymentButtonTypeBuy
                                        buttonStyle:PKPaymentButtonStyleBlack];
 
+        // Enable recurring token if supported (iOS 16+)
+        if ([self.applePayManager canRequestRecurringToken]) {
+            self.applePayManager.requestRecurringToken = YES;
+            NSLog(@"Recurring payment token enabled");
+        } else {
+            NSLog(@"Recurring payment token not supported on this iOS version");
+        }
+
         // Create Apple Pay button (Step 2)
         PKPaymentButton *applePayButton = [self.applePayManager createPaymentButton];
 
@@ -74,8 +82,9 @@
 
         // Add info label below button
         UILabel *infoLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, buttonY + buttonHeight + 20,
-                                                                        self.view.bounds.size.width - 40, 60)];
-        infoLabel.text = @"Tap the button to see the Apple Pay sheet.\n\nAmount: $19.99";
+                                                                        self.view.bounds.size.width - 40, 80)];
+        NSString *recurringInfo = [self.applePayManager canRequestRecurringToken] ? @"\nRecurring token: Enabled" : @"\nRecurring token: Not supported";
+        infoLabel.text = [NSString stringWithFormat:@"Tap the button to see the Apple Pay sheet.\n\nAmount: $19.99%@", recurringInfo];
         infoLabel.numberOfLines = 0;
         infoLabel.textAlignment = NSTextAlignmentCenter;
         infoLabel.font = [UIFont systemFontOfSize:14];

@@ -13,6 +13,7 @@ A native iOS library that provides easy-to-use Apple Pay functionality for Every
 - Completion handler-based async API (no delegates)
 - Device capability checking
 - Support for Visa and Mastercard payment networks
+- [Recurring payment token support](README-RecurringToken.md) (iOS 16+)
 - iOS 12.4+ compatibility
 
 ## Requirements
@@ -51,16 +52,28 @@ Before using this library, you need to configure Apple Pay in your project:
    - Enter an identifier (e.g., `merchant.com.yourcompany.app`)
    - Enter a description
 
-### 2. Xcode Project Configuration
+### 2. EveryPay setup
+
+When the payment processor handles decryption, they need to generate the cryptographic keys and provide the public key via a Certificate Signing Request (CSR) to the merchant. The merchant will then upload this CSR to the Apple Developer portal. In return, Apple will provide the merchant a certificate which the payment processor will need to import.
+
+**Merchant actions:**
+1. Login to the Everypay Merchant portal and open E-Shop Settings → select shop → Apple Pay (in apps). To the "Apple Pay Merchant Indentifier" field enter the identifier you created in the step 1 and register it.
+2. Download the "Payment Processing Certificate CSR" from the same block.
+3. Log in to the [Apple Developer Portal](https://developer.apple.com)
+4. Navigate to **Certificates, Identifiers & Profiles** > **Certificates**
+5. Add new certificate and select **Apple Pay Payment Processing Certificate**
+6. Select the merchant ID created in the previous step ("Apple Developer Account Setup")
+7. Under the *** Apple Pay Payment Processing Certificate*** click "Create Certificate" and upload the CSR file provided by Paytech/EveryPay
+8. Download the generated certificate (.cer file) from Apple Developer portal
+9. Upload the downloaded certificate to the Everypay Merchant portal under **E-Shop Settings** → select shop → **Apple Pay (in apps)** → **Upload Certificate**
+
+### 3. Xcode Project Configuration
 
 1. Open your project in Xcode
 2. Select your target
 3. Go to **Signing & Capabilities**
 4. Click **+ Capability** and add **Apple Pay**
 5. Select the Merchant ID you created
-
-### 3. Everypay setup
-1. Upload the certificate ("Apple Pay Payment Processing") from step 1 to the Everypay Merchant portal under E-Shop Settings -> select shop -> Apple Pay (in apps) -> Upload Certificate
 
 ### 4. Entitlements
 
@@ -283,6 +296,26 @@ The completion handler is called with one of the following:
 - `1000` - Manager not configured (call `configureWithAmount:...` first)
 - `1001` - Unable to create payment authorization view controller
 - `1002` - Payment was cancelled by the user
+- `1003` - Recurring payment missing required properties
+
+## Recurring Payment Tokens
+
+The SDK supports requesting recurring payment tokens on iOS 16+, allowing you to save card details for future payments. When enabled, Apple Pay displays additional consent UI to the user.
+
+For full documentation, see **[README-RecurringToken.md](README-RecurringToken.md)**.
+
+### Quick Example
+
+```objective-c
+EPApplePayManager *manager = [EPApplePayManager sharedManager];
+
+// Check if recurring tokens are supported
+if ([manager canRequestRecurringToken]) {
+    manager.requestRecurringToken = YES;
+    manager.recurringPaymentDescription = @"Save card for future payments";
+    manager.recurringManagementURL = [NSURL URLWithString:@"https://yourstore.com/manage"];
+}
+```
 
 ## Integration with React Native
 
@@ -505,20 +538,3 @@ open EverypayApplePay.xcworkspace
 ## License
 
 EverypayApplePay is available under the MIT license. See the LICENSE file for more info.
-
-## Author
-
-Märt Saarmets, mart.saarmets@datanor.ee
-
-## Version History
-
-### 0.1.0
-- Initial release
-- Backend mode with completion handler-based API
-- Simple three-step integration (configure, create button, present payment)
-- Apple Pay button creation with customizable styles
-- Full payment flow support
-- Returns payment token for backend processing
-- React Native friendly architecture
-- Visa and Mastercard network support
-- iOS 12.4+ compatibility

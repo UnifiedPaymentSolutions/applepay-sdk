@@ -74,6 +74,48 @@ typedef void (^EPApplePayCompletionHandler)(PKPayment * _Nullable payment, NSErr
 - (void)presentPaymentFromViewController:(UIViewController *)viewController
                        completionHandler:(EPApplePayCompletionHandler)completion;
 
+/**
+ Check if device/iOS supports recurring payment tokens (requires iOS 16+)
+ @return YES if recurring payment tokens are supported, NO otherwise
+ */
+- (BOOL)canRequestRecurringToken;
+
+/**
+ Enable recurring payment token request.
+ When set to YES and iOS 16+ is available, the payment request will include
+ a PKRecurringPaymentRequest for saving card details.
+ */
+@property (nonatomic, assign) BOOL requestRecurringToken;
+
+/**
+ Description of the recurring payment shown in the payment sheet.
+ Required when requestRecurringToken is YES.
+ Example: "Monthly subscription to Premium Plan"
+ */
+@property (nonatomic, copy, nullable) NSString *recurringPaymentDescription;
+
+/**
+ URL where the user can manage (update or delete) the recurring payment.
+ Required when requestRecurringToken is YES.
+ This URL is shown in the Wallet app and allows users to manage their saved payment method.
+ Example: [NSURL URLWithString:@"https://example.com/manage-subscription"]
+ */
+@property (nonatomic, strong, nullable) NSURL *recurringManagementURL;
+
+/**
+ Label for the recurring billing line item shown in the payment sheet.
+ Optional. If not set, defaults to merchantName.
+ Example: "Premium Plan"
+ */
+@property (nonatomic, copy, nullable) NSString *recurringBillingLabel;
+
+/**
+ Localized billing agreement text displayed to the user before they authorize payment.
+ Optional. When set, this text appears in the payment sheet explaining the recurring terms.
+ Example: "You agree to be charged €9.99 monthly until you cancel."
+ */
+@property (nonatomic, copy, nullable) NSString *recurringBillingAgreement;
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -58,6 +58,13 @@
                                                                  capabilities:capabilities];
 }
 
+- (BOOL)canRequestRecurringToken {
+    if (@available(iOS 16.0, *)) {
+        return YES;
+    }
+    return NO;
+}
+
 #pragma mark - Configuration
 
 - (void)configureWithAmount:(NSDecimalNumber *)amount
@@ -136,6 +143,41 @@
     PKPaymentSummaryItem *totalItem = [PKPaymentSummaryItem summaryItemWithLabel:self.merchantName
                                                                            amount:self.amount];
     request.paymentSummaryItems = @[totalItem];
+
+    // Add recurring payment request if enabled and iOS 16+ is available
+    if (self.requestRecurringToken) {
+        if (@available(iOS 16.0, *)) {
+            // Validate required recurring payment properties
+            if (!self.recurringPaymentDescription || !self.recurringManagementURL) {
+                NSError *error = [NSError errorWithDomain:@"com.everypay.applepay"
+                                                     code:1003
+                                                 userInfo:@{NSLocalizedDescriptionKey: @"Recurring payment requires recurringPaymentDescription and recurringManagementURL to be set."}];
+                if (completion) {
+                    completion(nil, error);
+                }
+                return;
+            }
+
+            // Use custom billing label or fall back to merchant name
+            NSString *billingLabel = self.recurringBillingLabel ?: self.merchantName;
+
+            PKRecurringPaymentSummaryItem *billingItem = [PKRecurringPaymentSummaryItem summaryItemWithLabel:billingLabel
+                                                                                                      amount:self.amount];
+            billingItem.intervalUnit = NSCalendarUnitMonth;
+
+            PKRecurringPaymentRequest *recurringRequest =
+                [[PKRecurringPaymentRequest alloc] initWithPaymentDescription:self.recurringPaymentDescription
+                                                               regularBilling:billingItem
+                                                                managementURL:self.recurringManagementURL];
+
+            // Set optional billing agreement if provided
+            if (self.recurringBillingAgreement) {
+                recurringRequest.billingAgreement = self.recurringBillingAgreement;
+            }
+
+            request.recurringPaymentRequest = recurringRequest;
+        }
+    }
 
     // Store current request
     self.currentPaymentRequest = request;
