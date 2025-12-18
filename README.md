@@ -16,6 +16,11 @@ A native iOS library that provides easy-to-use Apple Pay functionality for Every
 - [Recurring payment token support](README-RecurringToken.md) (iOS 16+)
 - iOS 12.4+ compatibility
 
+## Documentation
+
+- **[Backend Integration Guide](README-BackendIntegration.md)** - How to set up your backend server and make EveryPay API calls
+- **[Recurring Token Support](README-RecurringToken.md)** - Save card details for future payments (iOS 16+)
+
 ## Requirements
 
 - iOS 12.4+
