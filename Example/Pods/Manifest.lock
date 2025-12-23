@@ -1,0 +1,23 @@
+PODS:
+  - EverypayApplePay (0.1.0)
+  - Kiwi (3.0.0)
+
+DEPENDENCIES:
+  - EverypayApplePay (from `../`)
+  - Kiwi
+
+SPEC REPOS:
+  trunk:
+    - Kiwi
+
+EXTERNAL SOURCES:
+  EverypayApplePay:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  EverypayApplePay: ee1c0246a80cc28374b99b73357caa86d1d57c57
+  Kiwi: fbeafef0f00e4d8f7dcb3420a4930afe70af77f7
+
+PODFILE CHECKSUM: b40dcb78f1145d894ef6c00b56148b3397ae7fc3
+
+COCOAPODS: 1.16.2

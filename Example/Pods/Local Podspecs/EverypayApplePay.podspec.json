@@ -1,0 +1,22 @@
+{
+  "name": "EverypayApplePay",
+  "version": "0.1.0",
+  "summary": "A short description of EverypayApplePay.",
+  "description": "TODO: Add long description of the pod here.",
+  "homepage": "https://github.com/Märt Saarmets/EverypayApplePay",
+  "license": {
+    "type": "MIT",
+    "file": "LICENSE"
+  },
+  "authors": {
+    "Märt Saarmets": "mart.saarmets@datanor.ee"
+  },
+  "source": {
+    "git": "https://github.com/Märt Saarmets/EverypayApplePay.git",
+    "tag": "0.1.0"
+  },
+  "platforms": {
+    "ios": "10.0"
+  },
+  "source_files": "EverypayApplePay/Classes/**/*"
+}
