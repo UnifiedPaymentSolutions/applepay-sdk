@@ -1,0 +1,30 @@
+name: Publish to CocoaPods
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Publish to CocoaPods Trunk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+
+      - name: Install CocoaPods
+        run: gem install cocoapods
+
+      - name: Lint Podspec
+        run: pod lib lint EverypayApplePay.podspec --allow-warnings --skip-import-validation
+
+      - name: Push to CocoaPods Trunk
+        env:
+          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+        run: pod trunk push EverypayApplePay.podspec --allow-warnings --skip-import-validation
